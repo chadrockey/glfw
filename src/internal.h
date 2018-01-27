@@ -28,6 +28,7 @@
 #ifndef _glfw3_internal_h_
 #define _glfw3_internal_h_
 
+#include <stdint.h>
 
 #if defined(_GLFW_USE_CONFIG_H)
  #include "glfw_config.h"
@@ -46,7 +47,7 @@
 #endif
 
 #define GLFW_INCLUDE_NONE
-#include "../include/GLFW/glfw3.h"
+#include "../include/glfw/glfw3.h"
 
 typedef int GLFWbool;
 

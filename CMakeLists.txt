@@ -1,8 +1,17 @@
 set(CMAKE_LEGACY_CYGWIN_WIN32 OFF)
 
-project(GLFW C)
-
 cmake_minimum_required(VERSION 2.8.12)
+
+project(glfw)
+
+find_package(catkin REQUIRED)
+
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES glfw
+  CATKIN_DEPENDS
+  DEPENDS
+)
 
 if (NOT CMAKE_VERSION VERSION_LESS "3.0")
     # Until all major package systems have moved to CMake 3,
@@ -20,11 +29,11 @@ set(LIB_SUFFIX "" CACHE STRING "Takes an empty string or 64. Directory where lib
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" ON)
-option(GLFW_BUILD_TESTS "Build the GLFW test programs" ON)
-option(GLFW_BUILD_DOCS "Build the GLFW documentation" ON)
-option(GLFW_INSTALL "Generate installation target" ON)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
+option(GLFW_BUILD_TESTS "Build the GLFW test programs" OFF)
+option(GLFW_BUILD_DOCS "Build the GLFW documentation" OFF)
+option(GLFW_INSTALL "Generate installation target" OFF)
 option(GLFW_VULKAN_STATIC "Use the Vulkan loader statically linked into application" OFF)
 option(GLFW_DOCUMENT_INTERNALS "Include internals in documentation" OFF)
 
@@ -354,27 +363,150 @@ endforeach()
 #--------------------------------------------------------------------
 # Create generated files
 #--------------------------------------------------------------------
-include(CMakePackageConfigHelpers)
+#include(CMakePackageConfigHelpers)
 
-set(GLFW_CONFIG_PATH "lib${LIB_SUFFIX}/cmake/glfw3")
+#set(GLFW_CONFIG_PATH "lib${LIB_SUFFIX}/cmake/glfw3")
 
-configure_package_config_file(src/glfw3Config.cmake.in
-                              src/glfw3Config.cmake
-                              INSTALL_DESTINATION "${GLFW_CONFIG_PATH}"
-                              NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+#configure_package_config_file(src/glfw3Config.cmake.in
+#                              src/glfw3Config.cmake
+#                              INSTALL_DESTINATION "${GLFW_CONFIG_PATH}"
+#                              NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 
-write_basic_package_version_file(src/glfw3ConfigVersion.cmake
-                                 VERSION ${GLFW_VERSION_FULL}
-                                 COMPATIBILITY SameMajorVersion)
+#write_basic_package_version_file(src/glfw3ConfigVersion.cmake
+#                                 VERSION ${GLFW_VERSION_FULL}
+#                                 COMPATIBILITY SameMajorVersion)
 
-configure_file(src/glfw_config.h.in src/glfw_config.h @ONLY)
+#configure_file(src/glfw_config.h.in src/glfw_config.h @ONLY)
 
-configure_file(src/glfw3.pc.in src/glfw3.pc @ONLY)
+#configure_file(src/glfw3.pc.in src/glfw3.pc @ONLY)
 
 #--------------------------------------------------------------------
 # Add subdirectories
 #--------------------------------------------------------------------
-add_subdirectory(src)
+set(common_HEADERS src/internal.h
+                   src/glfw_config.h
+                   include/glfw/glfw3.h
+                   include/glfw/glfw3native.h)
+set(common_SOURCES src/context.c src/init.c src/input.c src/monitor.c src/vulkan.c src/window.c)
+
+if (_GLFW_COCOA)
+    set(glfw_HEADERS ${common_HEADERS} src/cocoa_platform.h src/cocoa_joystick.h
+                     src/posix_tls.h src/nsgl_context.h)
+    set(glfw_SOURCES ${common_SOURCES} src/cocoa_init.m src/cocoa_joystick.m
+                     src/cocoa_monitor.m src/cocoa_window.m src/cocoa_time.c src/posix_tls.c
+                     src/nsgl_context.m)
+elseif (_GLFW_WIN32)
+    set(glfw_HEADERS ${common_HEADERS} src/win32_platform.h src/win32_joystick.h
+                     src/wgl_context.h src/egl_context.h)
+    set(glfw_SOURCES ${common_SOURCES} src/win32_init.c src/win32_joystick.c
+                     src/win32_monitor.c src/win32_time.c src/win32_tls.c src/win32_window.c
+                     src/wgl_context.c src/egl_context.c)
+elseif (_GLFW_X11)
+    set(glfw_HEADERS ${common_HEADERS} src/x11_platform.h src/xkb_unicode.h
+                     src/linux_joystick.h src/posix_time.h src/posix_tls.h src/glx_context.h
+                     src/egl_context.h)
+    set(glfw_SOURCES ${common_SOURCES} src/x11_init.c src/x11_monitor.c src/x11_window.c
+                     src/xkb_unicode.c src/linux_joystick.c src/posix_time.c src/posix_tls.c
+                     src/glx_context.c src/egl_context.c)
+elseif (_GLFW_WAYLAND)
+    set(glfw_HEADERS ${common_HEADERS} src/wl_platform.h src/linux_joystick.h
+                     src/posix_time.h src/posix_tls.h src/xkb_unicode.h src/egl_context.h)
+    set(glfw_SOURCES ${common_SOURCES} src/wl_init.c src/wl_monitor.c src/wl_window.c
+                     src/linux_joystick.c src/posix_time.c src/posix_tls.c src/xkb_unicode.c
+                     src/egl_context.c)
+
+    ecm_add_wayland_client_protocol(glfw_SOURCES
+        PROTOCOL
+        ${WAYLAND_PROTOCOLS_PKGDATADIR}/unstable/relative-pointer/relative-pointer-unstable-v1.xml
+        BASENAME relative-pointer-unstable-v1)
+    ecm_add_wayland_client_protocol(glfw_SOURCES
+        PROTOCOL
+        ${WAYLAND_PROTOCOLS_PKGDATADIR}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml
+        BASENAME pointer-constraints-unstable-v1)
+elseif (_GLFW_MIR)
+    set(glfw_HEADERS ${common_HEADERS} src/mir_platform.h src/linux_joystick.h
+                     src/posix_time.h src/posix_tls.h src/xkb_unicode.h src/egl_context.h)
+    set(glfw_SOURCES ${common_SOURCES} src/mir_init.c src/mir_monitor.c src/mir_window.c
+                     src/linux_joystick.c src/posix_time.c src/posix_tls.c src/xkb_unicode.c
+                     src/egl_context.c)
+endif()
+
+if (APPLE)
+    # For some reason, CMake doesn't know about .m
+    set_source_files_properties(${glfw_SOURCES} PROPERTIES LANGUAGE C)
+endif()
+
+add_library(glfw ${glfw_SOURCES} ${glfw_HEADERS})
+set_target_properties(glfw PROPERTIES
+                      OUTPUT_NAME ${GLFW_LIB_NAME}
+                      VERSION ${GLFW_VERSION}
+                      SOVERSION ${GLFW_VERSION_MAJOR}
+                      POSITION_INDEPENDENT_CODE ON
+                      FOLDER "GLFW3")
+
+target_compile_definitions(glfw PRIVATE -D_GLFW_USE_CONFIG_H)
+target_include_directories(glfw PUBLIC
+                           $<BUILD_INTERFACE:${GLFW_SOURCE_DIR}/include>
+                           $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
+target_include_directories(glfw PRIVATE
+                           "${GLFW_SOURCE_DIR}/src"
+                           "${GLFW_BINARY_DIR}/src"
+                           ${glfw_INCLUDE_DIRS})
+
+# HACK: When building on MinGW, WINVER and UNICODE need to be defined before
+# the inclusion of stddef.h (by glfw3.h), which is itself included before
+# win32_platform.h.  We define them here until a saner solution can be found
+# NOTE: MinGW-w64 and Visual C++ do /not/ need this hack.
+target_compile_definitions(glfw PRIVATE
+                           "$<$<BOOL:${MINGW}>:UNICODE;WINVER=0x0501>")
+
+# Enable a reasonable set of warnings (no, -Wextra is not reasonable)
+target_compile_options(glfw PRIVATE
+                       "$<$<C_COMPILER_ID:Clang>:-Wall>"
+                       "$<$<C_COMPILER_ID:GNU>:-Wall>")
+
+if (BUILD_SHARED_LIBS)
+    if (WIN32)
+        if (MINGW)
+            # Remove the lib prefix on the DLL (but not the import library
+            set_target_properties(glfw PROPERTIES PREFIX "")
+
+            # Add a suffix to the import library to avoid naming conflicts
+            set_target_properties(glfw PROPERTIES IMPORT_SUFFIX "dll.a")
+        else()
+            # Add a suffix to the import library to avoid naming conflicts
+            set_target_properties(glfw PROPERTIES IMPORT_SUFFIX "dll.lib")
+        endif()
+    elseif (APPLE)
+        # Add -fno-common to work around a bug in Apple's GCC
+        target_compile_options(glfw PRIVATE "-fno-common")
+
+        set_target_properties(glfw PROPERTIES
+                              INSTALL_NAME_DIR "lib${LIB_SUFFIX}")
+    elseif (UNIX)
+        # Hide symbols not explicitly tagged for export from the shared library
+        target_compile_options(glfw PRIVATE "-fvisibility=hidden")
+    endif()
+
+    target_compile_definitions(glfw INTERFACE -DGLFW_DLL)
+    target_link_libraries(glfw PRIVATE ${glfw_LIBRARIES})
+else()
+    target_link_libraries(glfw INTERFACE ${glfw_LIBRARIES})
+endif()
+
+if (MSVC)
+    target_compile_definitions(glfw PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+#if (GLFW_INSTALL)
+#    install(TARGETS glfw EXPORT glfwTargets DESTINATION lib${LIB_SUFFIX})
+#endif()
+
+install(TARGETS glfw
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 if (GLFW_BUILD_EXAMPLES)
     add_subdirectory(examples)
@@ -390,30 +522,8 @@ endif()
 
 #--------------------------------------------------------------------
 # Install files other than the library
-# The library is installed by src/CMakeLists.txt
 #--------------------------------------------------------------------
-if (GLFW_INSTALL)
-    install(DIRECTORY include/GLFW DESTINATION include
-            FILES_MATCHING PATTERN glfw3.h PATTERN glfw3native.h)
-
-    install(FILES "${GLFW_BINARY_DIR}/src/glfw3Config.cmake"
-                  "${GLFW_BINARY_DIR}/src/glfw3ConfigVersion.cmake"
-            DESTINATION "${GLFW_CONFIG_PATH}")
-
-    install(EXPORT glfwTargets FILE glfw3Targets.cmake
-            EXPORT_LINK_INTERFACE_LIBRARIES
-            DESTINATION "${GLFW_CONFIG_PATH}")
-    install(FILES "${GLFW_BINARY_DIR}/src/glfw3.pc"
-            DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
-
-    # Only generate this target if no higher-level project already has
-    if (NOT TARGET uninstall)
-        configure_file(cmake_uninstall.cmake.in
-                       cmake_uninstall.cmake IMMEDIATE @ONLY)
-
-        add_custom_target(uninstall
-                          "${CMAKE_COMMAND}" -P
-                          "${GLFW_BINARY_DIR}/cmake_uninstall.cmake")
-    endif()
-endif()
-
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  PATTERN ".svn" EXCLUDE
+)

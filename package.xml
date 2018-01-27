@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>glfw</name>
+  <!-- The version tag needs to be updated with each new release of glfw -->
+  <version>3.2.1</version>
+  <description>
+  Catkin version of glfw.  Supports building as catkin package on Indigo, Ubuntu 14.04 and Kinect on Ubuntu 16.04.
+  </description>
+
+  <maintainer email="ahoy@fetchrobotics.com">Aaron Hoy</maintainer>
+
+  <url type="website">https://github.com/glfw/glfw</url>
+
+  <license>ZLib</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>pkg-config</build_depend>
+</package>
